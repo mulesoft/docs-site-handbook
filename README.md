@@ -1,2 +1,2 @@
 # docs-site-handbook
-Repository for documentation about the MuleSoft doc build process and site infrastructure.
+Repository for documentation about the MuleSoft docs build process and site infrastructure.
