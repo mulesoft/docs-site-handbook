@@ -1,4 +1,11 @@
 = MuleSoft Documentation Site Handbook
+// Settings:
+:idprefix:
+:idseparator: -
+ifdef::env-github[]
+:!toc-title:
+endif::[]
+// URLs:
 :url-jamstack: https://jamstack.org
 :url-asciidoc: https://asciidoctor.org/docs/what-is-asciidoc/
 :url-asciidoctor: https://asciidoctor.org
