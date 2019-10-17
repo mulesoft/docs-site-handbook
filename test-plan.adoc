@@ -1,0 +1,152 @@
+= MuleSoft Docs Test Plan
+:test-url: https://docs.stgx.mulesoft.com
+
+== Test Cases
+
+.List of URLS to use as test cases
+[horizontal]
+Site index:: {test-url}/general/
+No sub-headings:: {test-url}/access-management/
+Large amount of content and tables:: {test-url}/connectors/rosettanet/rosettanet-connector
+Large amount of content:: {test-url}/runtime-manager/anypoint-platform-cli-commands
+Complex tables:: {test-url}/mule-runtime/4.2/hadr-guide
+Long topic:: {test-url}/connectors/amazon/amazon-s3-connector-reference
+Long topic:: {test-url}/connectors/salesforce/salesforce-connector-96
+Japanese site index:: {test-url}/jp/general/
+Japanese topic with a lot of content:: {test-url}/jp/general/
+
+== Tests
+
+.Site start page
+[horizontal]
+Purpose::
+Validate that the nginx redirect for the site start page is configured properly.
+Action(s)::
+. Visit {test-url}.
+Verify::
+The page should redirect to {test-url}/general/ (Home > MuleSoft Documentation).
+
+.Current page is selected in navigation
+[horizontal]
+Purpose::
+Validate that the current page is selected in the navigation, if such an entry exists.
+Action(s)::
+. Visit {test-url}/studio/7.3/studio-update-sites
+Verify::
+The Studio product should be blue.
+The _Studio Update Sites_ entry should be visible and in blue.
+The _Studio Update Sites_ entry should be positioned at the midpoint in the navigtion panel.
+
+.Pre-expand children of current page in navigation
+[horizontal]
+Purpose::
+Validate that the children of the current page in the navigation are pre-expanded on page load.
+Action(s)::
+. Visit {test-url}/studio/7.3/to-download-and-install-studio
+Verify::
+The Studio product should be blue.
+The _Downloading and Installing Studio_ entry should be visible and in blue.
+The _Downloading and Installing Studio_ entry should be positioned at the midpoint in the navigtion panel.
+The expanded indicator to the left of _Downloading and Installing Studio_ entry should be "-".
+The children of the _Downloading and Installing Studio_ entry should be visible.
+
+.Page not in navigation
+[horizontal]
+Purpose::
+Validate that navigation for product version of the current page is selected and opened if page is not in navigation.
+Action(s)::
+. Visit {test-url}/connector-devkit/3.8/extending-ctf.
+Verify::
+The Connector DevKit product is highlighted, the version button reads "3.8", and the navigation for Connector DevKit 3.8 is preexpanded.
+The Connector DevKit entry should be placed at the midpoint of the navigation panel (broken).
+
+.Navigation state when switching product versions
+[horizontal]
+Purpose::
+Validate that the expanded state of the navigation tree for a product version is retained when switching between versions using the version selector.
+Action(s)::
+. Visit {test-url}/munit/2.1/munit-test-reference.
+. Activate the version selector for MUnit by clicking the 2.1 button.
+. Select 1.3 from the version menu.
+. Observe that no navigation items are expanded.
+. Activate the version selector for MUnit by clicking the 1.3 button.
+. Select 2.1 from the version menu.
+Verify::
+The navigation tree should be expanded as it was when the page was loaded (the _MUnit Test Reference_ item should be visible in blue).
+
+.Navigation state when toggling parent item
+[horizontal]
+Purpose::
+Validate that the expanded state of the navigation tree is retained when toggling a parent item.
+Action(s)::
+. Visit {test-url}/munit/2.1/munit-test-reference.
+. Click the - next to the item _About MUnit Test Suite_ in the navigation.
+. Click the + next to the item _About MUnit Test Suite_ in the navigation.
+Verify::
+The navigation tree should be expanded as it was when the page was loaded (the _MUnit Test Reference_ item should be visible in blue).
+
+.Pinned product version
+[horizontal]
+Purpose::
+Validate that the browser remembers that last selected version of a product.
+Action(s)::
+. Visit {test-url}/mule-runtime/3.7/mule-fundamentals
+. Click the MQ product, then click _About Anypoint MQ_.
+. Wait for the page to load.
+. Click the Mule Runtime product.
+Verify::
+The version button for the Mule Runtime product should read "3.7".
+The first entry under the Mule Runtime product is "Mule Fundamentals".
+Clicking the "Mule Fundamentals" item routes the browser to {test-url}/mule-runtime/3.7/mule-fundamentals (the original page).
+
+.Navigation expands when selecting version
+[horizontal]
+Purpose::
+Validate that selecting a version from the version selector expands the navigation for that product.
+Action(s)::
+. Visit {test-url}/general/.
+. Click on the version button for Connector DevKit.
+. Select 3.9 from the version menu.
+Verify::
+The navigation for the Connector DevKit product should expand.
+Clicking the first entry in the expanded navigation tree should route the browser to {test-url}/connector-devkit/3.9/.
+
+.Search integration
+[horizontal]
+Purpose::
+Validate that the Coveo integration is loaded properly.
+Action(s)::
+. Visit {test-url}/general/.
+. Click on the search button (box) at the top of the site navigation.
+Verify::
+The search form should appear as a modal dialog.
+The area behind the form should be shaded.
+The search form should read "Something went wrong".
+Any click outside the form should dismiss it.
+
+.Feedback mechanism
+[horizontal]
+Purpose::
+Validate that the feedback form integration is loaded properly.
+Action(s)::
+. Visit {test-url}/general/.
+. Scroll to the bottom of the page.
+. Click the "No, not really" button.
+. Close the Jira modal.
+. Click the "Leave feedback…" link.
+Verify::
+The feedback form should appear as a modal dialog.
+The area behind the form should be shaded.
+The description field in the search form should include the URL of the current page.
+Any click outside the form should dismiss it.
+
+.External links
+[horizontal]
+Purpose::
+Validate that external link opens in a new tab and that icon is displayed correctly.
+Action(s)::
+. Visit {test-url}/general/.
+. Click the Exchange link under Explore Anypoint Exchange
+Verify::
+The link to Exchange opens in a new tab.
+The icon appears next to the link text
