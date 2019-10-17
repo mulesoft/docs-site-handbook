@@ -4,6 +4,7 @@
 :idseparator: -
 ifdef::env-github[]
 :!toc-title:
+:note-caption: :paperclip:
 endif::[]
 // URLs:
 :url-jamstack: https://jamstack.org
