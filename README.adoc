@@ -18,8 +18,9 @@ endif::[]
 :url-awscli-docs: https://docs.aws.amazon.com/cli/
 :toc:
 
-This repository contains meta documentation for managing the MuleSoft documentation site.
-It covers the following topics:
+This document is the MuleSoft Documentation Site handbook.
+The goal of this document is to provide all the information necessary to successfully manage the MuleSoft documentation sites.
+The handbook covers the following topics:
 
 * introduction to the technology stack
 * a view of the hosting environment
