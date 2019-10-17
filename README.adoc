@@ -32,6 +32,8 @@ The handbook covers the following topics:
 * how the site is configured and built
 * how publishing is automated
 
+Let's begin with the high-level picture by surveying the technology stack used to generate, publish, and host the sites.
+
 == Technology Stack Overview
 
 The documentation is published as a static web site.
