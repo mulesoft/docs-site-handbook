@@ -1,0 +1,533 @@
+= MuleSoft Documentation Site Handbook
+:url-jamstack: https://jamstack.org
+:url-asciidoc: https://asciidoctor.org/docs/what-is-asciidoc/
+:url-asciidoctor: https://asciidoctor.org
+:url-antora: https://antora.org
+:url-antora-docs: https://docs.antora.org
+:url-github: https://github.com/mulesoft/?q=docs-
+:url-jenkins: https://jenkins.io
+:url-jenkins-docs: https://jenkins.io/doc/
+:url-awscli-docs: https://docs.aws.amazon.com/cli/
+:toc:
+
+This repository contains meta documentation for managing the MuleSoft documentation site.
+It covers the following topics:
+
+* introduction to the technology stack
+* a view of the hosting environment
+* the language in which content is written
+* how content is organized
+* where content is stored
+* how versioned content is managed
+* how the UI is configured, built, and consumed
+* how the site is configured and built
+* how publishing is automated
+
+== Technology Stack Overview
+
+The documentation is published as a static web site.
+The site is generated from plain text markup and page templates using a static site generator.
+The site is then published to a remote web server.
+The commands to generate and publish the site are automated using a CI server.
+All dynamic behavior, such as search, is implemented in the browser, typically by interacting with remote services.
+This architecture is referred to as {url-jamstack}[JAMstack].
+
+The main content for the site is written in {url-asciidoc}[AsciiDoc], a plain text documentation language.
+The content and supporting assets, such as images, are stored in git repositories hosted on {url-github}[GitHub].
+The AsciiDoc-based content is transformed into a web site by {url-antora}[Antora].
+Antora is a site generator designed for documentation.
+Antora retrieves content (pages and supporting assets) from git, converts the AsciiDoc to HTML using {url-asciidoctor}[Asciidoctor], then wraps that HTML in a layout to make web pages, and finally writes all the files for the site to an output directory to be published.
+
+Antora requires content be organized in a standard structure so it can be discovered and classified.
+At the root of that structure is a component descriptor (i.e., antora.yml), which identifies the component (i.e., product) and version to which the content belongs.
+A playbook file (e.g., antora-playbook.yml) tells Antora where to find the content, which content to take, and which UI to apply to that content for a given site profile (i.e., environment).
+
+Each site can be tailored to have a custom theme and behavior as provided by the UI.
+The UI is managed in a separate repository and distributed as a bundle (i.e., zip file).
+Aside from the main content, all the assets in the site, including the layout around the content, are provide by the UI.
+Ultimately, it's the UI templates that assemble the pages, using information in the UI model as well as references to supplemental assets, to create the pages.
+
+To learn more about how Antora works, refer to the {url-antora-docs}[Antora documentation].
+
+The published site is hosted on AWS infrastructure.
+The infrastructure is provisioned automatically by Terraform.
+Publishing of the site is also automated.
+The published site gets to AWS by way of a Jenkins CI/CD pipeline.
+
+In summary, the CI pipeline runs Antora to generate the site from source material retrieved from git repositories, then it publishes the output to AWS.
+
+== Source Material
+
+All source material for the site is stored in git repositories hosted on GitHub.
+There are several types of repositories.
+Each use branches for a different purpose.
+
+=== Git Repositories
+
+There are three types of git repositories used in the process of generating the documentation:
+
+Playbook Repository (docs-site-playbook)::
+* Sites are managed by the playbook repository
+* Hosts the Antora playbook file, which provides instructions (i.e., configuration) for how to generate the site that includes:
+ ** Basic site information, such as the title and URL
+ ** Runtime configuration, such as the location of the cache directory
+ ** The content sources, branches, and start paths
+ ** The URL of the UI bundle to apply to the site
+ ** Global attributes for the AsciiDoc processor
+* Stores manual redirect rules to be used by the web server
+* Each site environment is represented by a branch, named according to the environment (except production, which is hosted on the master branch)
+
+UI Repository (docs-site-ui)::
+* UI variants are managed by the UI repository
+* Stores the page templates and assets used to layout, style, and add behavior to the pages in the site
+* Hosts the bundle (i.e., zip file) for each UI variant, which Antora downloads and uses when generating a site
+ ** The UI bundle is stored as an attachment to a GitHub release, not in the repository itself
+ ** The UI bundle is packaged and published by the Gulp build tool
+* Each variant is represented by a branch, named according to the environment (except prod, which is hosted on the master branch)
+
+Content Repository (docs-*)::
+* Typically named docs-<product>, where <product> is the product to which the documentation applies
+* Stores the content of a site, which includes the pages, supporting assets, and navigation
+* Adheres to the standard Antora file structure
+* Each version is represented by a branch
+
+=== Branching Models
+
+Different branching models are used for the different repository types.
+In all, branches are used to manage different sites, UI variants, product versions, and changesets.
+
+==== Branches As Sites
+
+In the playbook repository (docs-site-playbook), there exists one branch per environment, referred to as a publication branch.
+A publication branch is typically named after the environment to which it publishes.
+Those mappings are as follows:
+
+* master - production English site
+* jp - production Japanese site
+* beta - beta sites
+* sandbox - sandbox site
+
+The site is described by the Antora playbook file named antora-playbook.yml located in each branch.
+When changes are made to a publication branch in the playbook repository (i.e., commits are pushed to it), the corresponding job runs automatically.
+Antora grabs the latest content from all the content sources listed in the playbook.
+Antora also grabs the UI bundle specified in the playbook.
+Using that source material, Antora generates the site.
+The job then publishes the site to its associated domain.
+
+Publication branches in the playbook repository are inherently divergent (i.e., they are orphan branches).
+While the branches may share a common ancestor, they're updated independently to suit the needs of that environment.
+Site branches may occasionally be synchronized and/or accept changes applied to other site branches.
+
+==== Branches As UI Variants
+
+In the UI repository (docs-site-ui), there exists one branch per variant, referred to as a variant branch.
+A variant branch is typically named after the variant to which it publishes (using 4 characters).
+Those mappings are as follows:
+
+* master - the UI for the English site (prod)
+* japn - the UI for the Japanese site
+* beta - the UI for the beta sites
+
+When changes are made to a variant branch in the UI repository (i.e., commits are pushed to it), the corresponding job runs automatically and publishes a new release (i.e., bundle) of the UI variant.
+UI bundles are built and released by Gulp.
+UI bundles are attached to a GitHub release in the same repository, qualified by the name of the variant (e.g., beta-2).
+
+Variant branches are inherently divergent (i.e., orphan branches).
+While they may share a common ancestor, they're updated independently to customize them for the site they serve.
+Variant branches may occasionally be synchronized and/or accept changes applied to other UI branches.
+
+==== Branches As Component Versions
+
+Branches in the content repositories are used to store different versions of the documentation for a product.
+The name of a branch does not determine the documentation version.
+Rather, the version is determined by the `version` field in the Antora component descriptor (antora.yml) in that branch.
+Typically, though, there is a one-to-one mapping between branch and component version.
+If a component isn't versioned, the content typically resides on the master (or latest) branch.
+
+A component version branch is only used if it's identified by a content source in the playbook file.
+
+==== Branches As Changesets
+
+Each repository type listed above can also have zero or more branches that start with DOCS-.
+The branch name should map to an issue in JIRA.
+These branches hold a changeset to modify the subject of the repository, whether it be the playbook, the UI, or the content.
+Each changeset branch should track the canonical branch to which the changeset applies.
+
+When changeset branches in the playbook and UI repositories are created and destroyed, corresponding jobs in Jenkins are created and destroyed automatically.
+We can think of changeset branches and the jobs as transient.
+
+Depending on the repository type, the pipeline in changeset branches will only run up to a certain point.
+
+* Changeset branches in the _playbook repository_ trigger a pipeline that runs up to, but not including, the publishing stage (does not publish the site)
+ ** This behavior is controlled by a condition in the Jenkins pipeline
+* Changeset branches in the _UI repository trigger_ a pipeline that runs up to, but not including, the release stage (does not release the bundle)
+ ** This behavior is controlled by a condition in the Jenkins pipeline
+
+Changeset branches in a _content repository_ do not trigger a pipeline.
+
+Now that you have an idea of how the source material is stored and organized, let's dive deeper into the CI/CD setup.
+
+== Continuous Integration (CI) Overview
+
+Generation, publication, and promotion of all MuleSoft documentation sites is automated and managed by a continuous integration (CI) server.
+That CI server is {url-jenkins}[Jenkins].
+
+Jenkins runs build jobs defined in pipelines.
+Build jobs handle all aspects of the site publishing process, including building each UI variant bundle, generating each site, publishing the sites to the web hosting infrastructure, invalidating the CDN cache(s), and, if relevant, promoting the site from pre-production to production.
+Since this process is carried out automatically, both in response to changes and on a schedule, this is also classified as a continuous deployment (CD) process.
+
+This section explains what software the CI jobs use, how the jobs are created and organized, and which stages of a pipeline get used when a job is run.
+
+=== Software Dependencies
+
+The CI jobs are designed to run on a Debian/Ubuntu Linux agent.
+The jobs use the following software:
+
+* Bash (command: `bash`)
+* git (command: `git`)
+* Node 10 (commands: `node` and `npm`)
+* aws CLI (command: `aws`)
+* jq (command: `jq`)
+
+The rest of the software is downloaded and installed by the job itself.
+
+The jobs also require credentials to be configured in Jenkins to access remote services such as git repositories on GitHub and infrastructure on AWS.
+The identifiers for these credentials are specified at the top of each pipeline file.
+
+=== Item Hierarchy
+
+CI jobs are organized in a hierarchy under the Developer Documents (application/Developer Documents) group in Jenkins.
+The jobs are created automatically by the top-level item (the organization).
+There are three levels to this hierarchy, which are described in this section.
+
+Organization (i.e., repository scanner)::
+* Presented as a folder in Jenkins
+* Scans for repositories in the `mulesoft` organization on GitHub
+* Creates jobs for each branch of each repository that matches the specified criteria
+ ** Repository criteria: Repository name matches docs-site-playbook or docs-site-ui
+ ** Branch criteria: Branch contains a Jenkinsfile at the root of the repository tree
+* If the repository matches the criteria, the scanner creates a multi-branch pipeline job for that repository
+* If a branch in one of those repositories matches the criteria, that branch is included in the multi-branch pipeline job
+
+Multi-branch pipeline (i.e., branch scanner)::
+* Presented as a folder in Jenkins
+* Watches for branches in the specified repository on GitHub and creates a job for each branch that matches the specified criteria
+ ** The criteria is inherited if the job was created by the repository scanner
+
+Branch pipeline (i.e., job)::
+* Presented as a job in Jenkins
+* The job that executes the pipeline file (typically Jenkinsfile) for a specified branch of a repository
+* Monitors the repository and runs when new commits are added to the branch
+* Runs on a scheduled if configured by the pipeline (see triggers section in Jenkinsfile)
+* The job configuration is controlled entirely by the declarative pipeline in Jenkinsfile
++
+NOTE: The form for the job in the web interface is read only.
+
+=== How Pipelines Are Defined
+
+The actions performed by a job are described in a {url-jenkins-docs}book/pipeline/getting-started/[Jenkins Pipeline].
+First and foremost, the pipeline defines the commands (i.e., actions) to run.
+Those commands are organized into steps, which are further organized into stages.
+The pipeline includes additional configuration, some of which tells the CI server how, where, and when to run the job, and some needed by the commands themselves.
+
+All Jenkins jobs are described using a declarative pipeline (not a scripted pipeline).
+The declarative pipeline is defined in a {url-jenkins-docs}book/pipeline/jenkinsfile/[Jenkinsfile] and written in a {url-jenkins-docs}book/pipeline/syntax/[Groovy-style DSL].
+
+A declarative pipeline organizes the build into steps that run inside stages, with configuration weaved throughout.
+A declarative pipeline typically accesses credentials stored in the global Jenkins configuration.
+The Jenkinsfile is stored in the git repository in the branch that it builds (i.e.,. the pipeline is scoped to the branch).
+A pipeline can access the name of the branch from which it was launched via the `BRANCH_NAME` environment variable.
+This comes in handy for filtering pipeline stages.
+
+=== Pipeline Stage Filtering
+
+If the commit message ends with `[skip ci]`, all stages of the pipeline will be skipped regardless of which branch is being run.
+This filtering is handled using a `when` condition in each stage:
+
+[source,groovy]
+----
+when { not { environment name: 'SKIP_CI', value: 'true' } }
+----
+
+Each pipeline defines the canonical branch in the `gitBranch` variable at the top of the pipeline file:
+
+[source,groovy]
+----
+def gitBranch = 'master'
+----
+
+If the current branch matches the branch specified (meaning the job is being run from that branch), the job will run all the stages in the pipeline.
+If the branch does not match the branch specified (meaning the job is being run from a different branch), the job will exclude any stage that deploys the artifacts.
+This filtering is done using a `when` condition in the stage.
+For example:
+
+[source,groovy]
+----
+when { allOf { not { environment name: 'SKIP_CI', value: 'true' }; environment name: 'BRANCH_NAME', value: gitBranch } }
+----
+
+When the current branch does not match the branch specified, its typically a changeset branch (e.g., DOCS-1234).
+In this case, we want the site to be built to catch any errors, just not published.
+
+=== Job Triggers
+
+By default, jobs are triggered when a commit is pushed to the branch with which that job is associated.
+This hook is set up automatically by the branch scanner of the multi-branch pipeline.
+
+A declarative pipeline can also configure itself to run on a schedule.
+This configuration is done using the `triggers` clause in the pipeline.
+For example:
+
+[source,groovy]
+----
+triggers {
+  cron(cronSchedule)
+}
+----
+
+The scheduled job is either registered or updated, as necessary, during initialization each time the job runs.
+Therefore, to make a change to the trigger, you need to push a commit to the branch so the job runs.
+That will, in turn, register the trigger, which will be active from that point forward.
+
+== Hosting Environment
+
+The MuleSoft documentation sites are hosted on AWS infrastructure.
+The infrastructure is provisioned using Terraform scripts.
+This section identifies the services used and how the files move through them.
+
+=== Storage (S3)
+
+The files served by the web server are stored in an S3 bucket.
+Each environment uses a dedicated S3 bucket.
+For most environments, the files are stored in the root of the bucket.
+The exception is the beta environment, which uses subfolders to store each discrete beta site.
+
+The files are copied to the S3 bucket by the CI job using the `aws` command (either `cp` or `sync`).
+
+=== Webserver (nginx on EC2)
+
+The files are servced by an nginx web server running on an EC2 server.
+The web server is configured to serve files from the corresponding S3 bucket.
+The web server also uses redirect rules to route URLs.
+Those rules are published to the S3 bucket by the CI job.
+The redirect rules may either come from manual redirects stored in the playbook repositories, redirects generate by Antora from page aliases, or both.
+The EC2 server then pulls those rules from the S3 bucket using a scheduled task.
+
+=== CDN (Cloudfront)
+
+The sites are always proxied by a Cloudfront CDN.
+The CDN caches the files in an edge location closer to the requester and enables access to the site via HTTPS.
+
+For the production sites (English and Japanese), the CDN serves yet another purpose: to provide nginx access to a private bucket.
+The S3 buckets for these sites are private.
+To allow the web server to access them easily, a second CDN is used to give the files in that bucket a public URL (aka backend CDN).
+Cloudfront is able to access private buckets without any additional configuration.
+The web server then accesses the files through the backend CDN URL instead of accessing the bucket directly.
+
+=== Summary
+
+The AWS services used are as follows:
+
+* S3 - stores the files for the website
+* EC2 - runs the nginx server
+* nginx - serves the files from the S3 bucket; applies the redirect rules
+* Cloudfront - acts as a CDN; provides nginx access to files in a private bucket
+
+This infrastructure is provisioned using Terraform scripts.
+
+== Site Publishing
+
+This section goes into more detail about how sites get published.
+
+Due to how the CI server is configured, a CI job runs for every branch in the docs-site-playbook repository that contains a Jenkinsfile.
+That also means each branch can configure its own CI pipeline.
+Assuming the Jenkinsfile on the branch is not modified, the CI job will run Antora automatically.
+That means, by default, Antora is run on every branch that contains a Jenkinsfile.
+
+The Jenkinsfile is configured to only run the Publish and Promote stages under certain conditions:
+
+Publish:: Only runs if the current branch matches the value of the gitBranch variable.
+Promote:: Only runs if the current branch matches the value of the gitBranch variable *and* the job was triggered manually with the pipeline parameter set to "build and promote" or "promote only".
+
+NOTE: The job accesses the name of the branch from which it was launched via the BRANCH_NAME environment variable.
+
+In the Publish stage, the files are copied to S3 using the {url-awscli-docs}[AWS CLI] (command: `aws`).
+If the job was triggered by a schedule, and is running on a Sunday, the files are synced to the S3 bucket instead of copied (to purge removed files).
+
+If any files were published and/or promoted, the pipeline will invalidate the relevant CDN caches.
+
+In the production pipeline (branch: master), the xref validator is run before the site is generated.
+If there are any xref errors, the build will be aborted.
+
+The production and jp pipelines publish to a staging (i.e., pre-production) environment by default.
+Promotion from staging to production only happens if the job is triggered manually and the pipeline parameter is set to "build and promote" or "promote only".
+If the latter option is selected, the site will be promoted directly from the staging bucket without being rebuilt.
+
+The production, jp, and beta pipelines are configured to automatically run twice a day, even if no commits are pushed to the corresponding playbok repository.
+
+While the Japanese site (branch: jp) has its own buckets, it shares the same web server as the English site (branch: master).
+The Japanese site is mapped to the /jp/ pathname of the production site.
+The files for the Japanese site are copied to the /jp/ folder in the bucket to simplify the nginx proxy configuration.
+
+To create a new site environment, you first need to provide the necessary infrastructure using Terraform (not covered here).
+Next, create a new branch (starting from the branch for whichever environment the site should be derived).
+Then, update the gitBranch variable in the Jenkinsfile to match that branch name.
+(You may decide to update the name and description fields in package.json as well, then run `npm i` to update the lock file).
+Finally, push the branch to the remote repository.
+Jenkins will automatically create a pipeline job for that environment, which will generate and publish the site.
+
+== UI Bundle Publishing
+
+This section goes into more detail about how UI bundles get published.
+
+Due to how the CI server is configured, a CI job runs for every branch in the docs-site-ui repository that contains a Jenkinsfile.
+That also means each branch can configure its own CI pipeline.
+Assuming the Jenkinsfile on the branch is not modified, the CI job will bundle (i.e., package) the UI automatically.
+That means, by default, the UI is bundled for every branch that contains a Jenkinsfile.
+
+If that branch is a release branch, the UI bundle will also be published.
+In other words, a UI bundle is published for each variant (e.g., prod, beta, japn, etc).
+
+When the UI bundle is published, the repository is tagged with the next release number in the sequence for that variant (e.g., prod-10, beta-12) and the UI bundle is attached to the GitHub release associated with that tag.
+The UI bundle is then available via a public URL provided by the GitHub repository (which can be found from the Releases tab).
+The tag is also the UI bundle's version.
+During the release, that version gets injected into the ui.yml file in the UI bundle.
+
+The release is performed using the `gulp release` task in the Release stage.
+A release is made for every commit that is pushed to a release branch (the branch that matches the gitBranch variable) unless the commit message ends with the string `[skip ci]`.
+
+The Jenkinsfile is configured to only run the Release stage under the following circumstance: the current branch matches the value of the gitBranch variable.
+
+To create a new UI variant, create a new 4-letter branch (starting from the branch for whichever variant the UI should be derived).
+Then, update the gitBranch variable in the Jenkinsfile to match that branch name.
+(You may decide to update the name and description fields in package.json as well, then run `npm i` to update the lock file).
+Finally, push the branch to the remote repository.
+Jenkins will automatically create a pipeline job for that variant, which will tag the repository, create a release on GitHub, and publish the UI bundle to that release.
+
+== Working with Multiple Branches
+
+As you've learned, branches are used heavily in the MuleSoft documentation platform.
+They're used for managing site playbooks, UI variants, and documentation versions.
+You'll be using them a lot, and that means having to frequently switch between them.
+Since branches reuse the same worktree by default, this can make working with multiple branches concurrently a real pain.
+Fortunately, git has a solution for this problem: _multiple worktrees_.
+
+=== git worktree
+
+git allows you to map branches in a repository to folders on your local filesystem using the `git worktree` command.
+That means you can have multiple branches "`checked out`" at the same time and be able to work with them independently.
+It's a surprising useful tool.
+
+The next section walks you through how to set up a worktree for each branch.
+
+=== Setting Up Multiple Worktrees
+
+For this tutorial, we'll be using the docs-site-ui repository to set up multiple worktrees.
+
+First create an empty folder that matches the name of the repository, docs-site-ui.
+
+ $ mkdir docs-site-ui
+
+This folder will contain the folders for each worktree.
+Switch to that folder and clone the repository.
+The last argument tells git to name the repository folder after the default branch (our default worktree).
+
+ $ cd docs-site-ui
+   git clone -b master https://github.com/mulesoft/docs-site-ui master
+   cd master
+
+Now you've cloned the repository and you are in the folder for the first worktree, this one for the master branch.
+
+The next step is to set up another worktree.
+Use the worktree command to checkout the japn branch into a separate worktree which is adjacent to the master folder:
+
+ $ git worktree add -b japn ../japn
+
+Now you see two folders under the docs-site-ui folder, master and japn.
+What's interesting about these folders is that they're not independent repositories (i.e., separate git clones), but rather two different worktrees associated with the same local repository.
+You're just allow worktrees for two different branches to be active at the same time.
+
+You can set up additional worktrees in the same manner:
+
+ $ git worktree add -b beta ../beta
+
+The advantage of this setup is that you never have to tell git to switch branches.
+Instead, you change folders.
+That way, any local changes you left behind in one branch remain untouched when you're working with a different branch.
+So it's easier to manage changesets for each branch.
+It's also easier to port changes between them, as we'll learn.
+
+=== Create a Branch with a Changeset
+
+To create a changeset for a branch, you'll work entirely in the folder containing the worktree for that branch.
+Since the worktree is linked to that branch, this sets you up to make a changeset starting from that branch.
+
+Let's assume we want to make a change to the japn UI variant.
+First, switch to the japn folder:
+
+ $ cd japn
+
+Next, create a changeset branch:
+
+ $ git checkout -b DOCS-1001
+
+The changeset branch is started from the japn branch and automatically configured to track it.
+You're now ready to start making changes.
+
+Once you've committed all the changes, you can push this branch to the remote:
+
+ $ git push origin DOCS-1001
+
+When you issue the PR, be sure to select the japn as the target.
+
+When you're done, switch back to the japn branch:
+
+ $ git switch -
+
+As you might suspect, you could use a separate worktrees for your changeset branches too.
+Instead of creating the new branch using the checkout command, you create the new branch using the worktree command instead:
+
+ $ git worktree add -b DOCS-1002 ../DOCS-1002
+
+This is exactly the same as creating a new branch from the japn branch, except you get a dedicated worktree as well.
+To use it, switch to the new folder:
+
+ $ cd ../DOCS-1002
+
+When you're done with this branch, switch back to the primary branch and remove the changeset branch and worktree using:
+
+ $ cd ../japn
+   git worktree remove ../DOCS-1002
+
+Using the multiple worktrees, it's also possible to port changes between branches.
+
+=== Porting Changes Between Branches
+
+In this system, branches are inherently divergent.
+While the branches may share a common ancestor, they must be updated independently.
+But multiple worktrees can help us with that.
+If the branches are kept close enough in sync (in terms of current state, not history), you can cherry-pick a commit from one to another.
+
+Let's say we want to bring over a change from the master branch to the japn branch of the UI repository.
+To do so, we first switch to the folder for the japn branch.
+
+ $ cd jpan
+
+First, we can look at the log for the master branch from this folder:
+
+ $ git log master
+
+That allows us to figure out which commit to grab.
+Remember, this is all part of the same repository.
+Once you've identified the commit (or commits) you want, you can pull it into the current branch.
+
+ $ git cherry-pick <commit-id>
+
+When you are done pulling over changes, push the result.
+Just remember to push it to the correct branch.
+
+== Resources
+
+* {url-antora-docs}[Antora documentation]
+* {url-awscli-docs}[AWS CLI documentation]
+* {url-jenkins-docs}[Jenkins documentation]
