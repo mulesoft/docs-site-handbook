@@ -452,7 +452,7 @@ Now you've cloned the repository and you are in the folder for the first worktre
 The next step is to set up another worktree.
 Use the worktree command to checkout the japn branch into a separate worktree which is adjacent to the master folder:
 
- $ git worktree add -b japn ../japn
+ $ git worktree add -b japn ../japn origin/japn
 
 Now you see two folders under the docs-site-ui folder, master and japn.
 What's interesting about these folders is that they're not independent repositories (i.e., separate git clones), but rather two different worktrees associated with the same local repository.
@@ -460,7 +460,7 @@ You're just allow worktrees for two different branches to be active at the same 
 
 You can set up additional worktrees in the same manner:
 
- $ git worktree add -b beta ../beta
+ $ git worktree add -b beta ../beta origin/beta
 
 The advantage of this setup is that you never have to tell git to switch branches.
 Instead, you change folders.
@@ -522,7 +522,7 @@ If the branches are kept close enough in sync (in terms of current state, not hi
 Let's say we want to bring over a change from the master branch to the japn branch of the UI repository.
 To do so, we first switch to the folder for the japn branch.
 
- $ cd jpan
+ $ cd japn
 
 First, we can look at the log for the master branch from this folder:
 
