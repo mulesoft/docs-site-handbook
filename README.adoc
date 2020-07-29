@@ -67,6 +67,24 @@ The published site gets to AWS by way of a Jenkins CI/CD pipeline.
 
 In summary, the CI pipeline runs Antora to generate the site from source material retrieved from git repositories, then it publishes the output to AWS.
 
+=== Custom Site Generator
+
+Instead of the default (built-in) site generator provided by Antora, this site must be built using a custom site generator named `@antora/site-generator-ms`.
+The site generator tells Antora which actions to perform and in what order.
+The custom site generator is installed by NPM and passed to Antora using the `--generate` flag.
+
+The custom site generator provides the following additional functionality over the default site generator:
+
+. Exports the navigation data to a JavaScript data file named [.path]_navigation-data.js_
+ ** This file is referenced in the UI template and loaded by the browser to build the navigation on each page.
+ ** The navigatin data is exported to a dedicated file to reduce the size of each HTML file and allow the navigation to be loaded more efficiently by the browser.
+ ** This functionality is enabled when the `export-navigation-data` AsciiDoc attribute is defined in the playbook.
+. Creates a manifest named [.path]_site-manifest.json_ that itemizes the components, component versions, pages, and alias in the site
+ ** You can think of this file as an enhanced sitemap.
+ ** This file can be used by a local build to generate a partial site, yet still be able to resolve all xrefs.
+. Diverts unresolved xrefs in a partial site to the primary site.
+ ** This functinality is enabled when either the `primary-site-url` and/or `primary-site-manifest-url` AsciiDoc attribute is defined in the playbook.
+
 == Source Material
 
 All source material for the site is stored in git repositories hosted on GitHub.
